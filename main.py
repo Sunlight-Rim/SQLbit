@@ -18,7 +18,7 @@ def main():
     table_name  = parse_config('table_name', "Input name of the table you know (if so): ", config)
     col_name    = parse_config('col_name', "Input name of the column you know (if so): ", config)
     cookies     = dict(ast.literal_eval(config["Default"].get("cookies"))) \
-                  if config["Default"].get("cookies") != "" \
+                  if config["Default"].get("cookies") \
                   else dict(input("Set cookie #"+str(i)+": ").split() \
                   for i in range(int(input("Some cookies? (enter quantity or 0) "))))
 
@@ -29,7 +29,7 @@ def main():
 
 
 def parse_config(key, message, config):
-    if config["Default"].get(key) != "":
+    if config["Default"].get(key):
         return config["Default"].get(key)
     else:
         return input(message)
