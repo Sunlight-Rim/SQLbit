@@ -6,7 +6,7 @@
 # Response on true queries
   res_true    =
 # Response on false queries
-  res_false   =
+  res_false   = Nope
 # Name of the table you know
   table_name  = sqlite_master
 # Table column name you know
