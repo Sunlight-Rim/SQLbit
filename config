@@ -1,12 +1,12 @@
 [Default]
 # Full target url from "https://" (or "http://") to parameter assignment. For example, "https://www.google.com/search?q="
-  url         =
+  url         = https://injection.pythonanywhere.com/sql3/?search=
 # Cookies in the format {"user" : "mylogin"} here and in the format "user mylogin" in the input
-  cookies     =
+  cookies     = {"sql1" : "4YwEkj8EpTv4", "sql2" : "KHjeBcSG5VhE"}
 # Response on true queries
-  res_true    =
+  res_true    = The item is in the stock
 # Response on false queries
-  res_false   = Nope
+  res_false   = n
 # Name of the table you know
   table_name  = sqlite_master
 # Table column name you know

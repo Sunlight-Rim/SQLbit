@@ -1,22 +1,32 @@
-# Just another Blind SQL Injection Tool
-A script for automatize boolean-based blind SQL injections. \
-Uses [binary search](https://en.wikipedia.org/wiki/Binary_search_algorithm).
-Works with SQLite at least, supports using cookies.
+# SQL Blind Injection Tool
+Just another script for automatize boolean-based blind SQL injections. \
+Works with SQLite at least, supports using cookies. \
+It uses bitwise comparisons with multithreading to find cell values instead of binary search, which is more efficient.
 
-On the current moment it can:
-* Search row values by columns in a table
-* Search characters count in a row by column in a table
+It's able to:
+* Search cell values by columns in a table
+* Search characters count in a cells by columns in a table
 * Search rows count in a table
 
-Optimization idea:
-Use multithreading with bitwise comparison.
-![idea](idea.jpg)
-## Intsall
-```
-git clone https://github.com/Sunlight-Rim/just_another_blind_injection_tool.git
-cd just_another_blind_injection_tool
-python main.py
-```
-Specify the data in the config file or in the program input.
+The search algorithm is shown below. \
+Knowing the name of its column ('sqlite_master' by default in sqlite, for example) and the column name of it ('name' in sqlite) you can find values ​​of every cell in every row. And the fastest algorithm for this is checking the binary values of every character in every cell, which can be perform using multiple threads. Considering this, we can send only 7 requests to get the standard 7-bit letter, and using 1000 threads, we get ~142 letters per moment (it's also worth keeping in mind requests to get the length of a cell value).
 
-![screenshot](screenshot.png)
+![idea](img/idea.jpg)
+
+The number of bits need to compare (7 by default for ASCII) and the number of threads can be specified as input data.
+
+## Installing
+```
+git clone https://github.com/Sunlight-Rim/sqlbit.git
+pip3 install -r requirements.txt
+```
+## Usage
+It does not accept command line arguments, so you can specify data in the config file or at runtime program.
+```
+python sqlbit.py
+```
+
+![screenshot](img/screenshot.png)
+
+---
+**Note:** please, use it only for your own servers or for the servers of those owners with whom you have agreed in advance.
