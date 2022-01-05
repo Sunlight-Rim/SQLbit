@@ -1,3 +1,5 @@
 beautifulsoup4 >= 4.10.0
+asyncio >= 3.4.3
+aiohttp >= 3.8.0
 lxml >= 4.6.3
 requests >= 2.26.0
