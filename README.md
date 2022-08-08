@@ -1,7 +1,7 @@
 # SQL Blind Injection Tool
 Just another script for automatize boolean-based blind SQL injections. \
 Works with SQLite at least, supports using cookies. \
-It uses bitwise comparisons with multithreading to find cell values instead of binary search, which is more efficient.
+It uses bitwise comparisons with multithreading to find cell values, which is more efficient compared to binary search.
 
 It's able to:
 * Search cell values by columns in a table
